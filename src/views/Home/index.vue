@@ -47,7 +47,7 @@
 <script setup lang="ts">
     import {getCurrentInstance, ref, unref, watch, computed, onMounted, nextTick} from 'vue';
     import {Notify} from 'vant';
-    import wx from 'weixin-js-sdk'
+    //import wx from 'weixin-js-sdk'
 
     //步骤
     const step = ref(1);
