@@ -1,11 +1,11 @@
 <template>
-    <div class="home">
+    <div class="home" v-if="weixin.code">
         <div class="h-logo">
             <img src="/src/assets/idc.png">
-        </div>
+        </div><label style="position: fixed;top: 1px">{{security}}{{codeTrue}}</label>
         <div class="step1" v-if="step==1">
             <van-field
-                    v-model="phone"
+                    v-model="security.phone"
                     center
                     clearable
                     type="number"
@@ -20,9 +20,6 @@
                     </van-button>
                 </template>
             </van-field>
-            <div>{{location}}</div>
-            <div>{{locationIp}}</div>
-            {{result}}
         </div>
         <div class="step2" v-if="step==2">
             <van-password-input
@@ -36,13 +33,20 @@
                     maxlength="6"
                     :show="showKeyboard"
                     @blur="showKeyboard = false"/>
+            <div class="load" v-if="showLoad">
+                <van-loading size="24px">验证中，请稍后...</van-loading>
+            </div>
         </div>
         <div class="step3" v-if="step==3">
-            <van-icon name="passed" size="100" color="#67C23A"/>
-            <!--            <p class="mt10">您所查询的商品为首次验证</p>-->
-            <p class="mt10">商品为正品</p>
-            <!--            <van-icon name="warning-o" size="100" color="#F56C6C"/>-->
-            <!--            <p class="mt10">非首次验证</p>-->
+            <template v-if="isCertified">
+                <van-icon name="passed" size="100" color="#67C23A"/>
+                <p class="mt10">商品为正品</p>
+                <p class="cx">第 <label>{{number}}</label> 次查询</p>
+            </template>
+            <template v-else>
+                <van-icon name="warning-o" size="100" color="#F56C6C"/>
+                <p class="mt10">商品为仿品</p>
+            </template>
         </div>
     </div>
 </template>
@@ -61,10 +65,10 @@
     const that = (getCurrentInstance() as any).proxy;
     //步骤
     const step = ref(1);
-    //手机号
-    const phone: any = ref('')
+
     //动态码
-    const code = ref('');
+    const code = ref('')
+    const codeTrue = ref('');
     const codeLoading = ref(false)
     const codeInfo = ref('')
 
@@ -82,8 +86,9 @@
         },
         (v: any) => {
             nextTick(() => {
+                security.value.erCode = v.value;
                 if (v.value.length == 6) {
-                    if (v.value == '123456') {
+                    if (v.value == codeTrue.value) {
                         step3();
                     } else {
                         Notify({type: 'danger', message: '动态码有误', duration: 3000});
@@ -116,7 +121,6 @@
     async function cookies() {
         getCookie('weixin') ? (weixin.value = JSON.parse(getCookie('weixin'))) : null
         getCookie('cgi') ? (cgi.value = JSON.parse(getCookie('cgi'))) : null
-        //console.log(weixin.value, cgi.value)
     }
 
     //判断微信access_token是否失效
@@ -124,7 +128,6 @@
         if (weixin.value.access_token) {
             const time2 = m(weixin.value.time).format();
             const diff = m().diff(time2, 'second');
-            //console.log(diff)
             if (diff < weixin.value.diffTime) {
 
             } else {
@@ -150,15 +153,6 @@
                 weixin.value.time = m().format()
                 setCookie('weixin', JSON.stringify(weixin.value))
             }
-
-            //获取用户信息
-            // idc.weixin_userinfo({
-            //     access_token: weixin.value.access_token,
-            //     openid: weixin.value.openid,
-            //     lang: 'zh_CN'
-            // }).then((data: any) => {
-            //     console.log(data)
-            // })
         })
     }
 
@@ -211,24 +205,24 @@
     })
 
     //随机生成字符串
-    async function getRandomString(len:number){
+    async function getRandomString(len: number) {
         let _charStr = 'abacdefghjklmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ0123456789',
             min = 0,
-            max = _charStr.length-1,
+            max = _charStr.length - 1,
             _str = '';                    //定义随机字符串 变量
         //判断是否指定长度，否则默认长度为15
         len = len || 15;
         //循环生成字符串
-        for(var i = 0, index; i < len; i++){
-            index = (function(randomIndexFunc, i){
+        for (var i = 0, index; i < len; i++) {
+            index = (function (randomIndexFunc, i) {
                 return randomIndexFunc(min, max, i, randomIndexFunc);
-            })(function(min:any, max:any, i:any, _self:any){
-                let indexTemp = Math.floor(Math.random()*(max-min+1)+min),
+            })(function (min: any, max: any, i: any, _self: any) {
+                let indexTemp = Math.floor(Math.random() * (max - min + 1) + min),
                     numStart = _charStr.length - 10;
-                if(i==0&&indexTemp >=numStart){
+                if (i == 0 && indexTemp >= numStart) {
                     indexTemp = _self(min, max, i, _self);
                 }
-                return indexTemp ;
+                return indexTemp;
             }, i);
             _str += _charStr[index];
         }
@@ -239,12 +233,10 @@
         sign.value.noncestr = await getRandomString(16);
         let json: string = 'jsapi_ticket=' + cgi.value.jsapi_ticket + '&noncestr=' + sign.value.noncestr + '&timestamp=' + sign.value.timestamp + '&url=' + sign.value.url
         sign.value.signature = sha1(json)
-        //console.log(json)
         await wxInit();
     }
 
     //初始化微信授权
-    const result = ref('')
     async function wxInit() {
         //console.log(cgi.value, sign.value)
         wx.config({
@@ -253,27 +245,36 @@
             timestamp: sign.value.timestamp, // 必填，生成签名的时间戳
             nonceStr: sign.value.noncestr, // 必填，生成签名的随机串
             signature: sign.value.signature,// 必填，签名
-            jsApiList: ['scanQRCode','getLocation'] // 必填，需要使用的JS接口列表
+            jsApiList: ['scanQRCode', 'getLocation'] // 必填，需要使用的JS接口列表
         });
 
-        wx.ready(function(){
-            // wx.scanQRCode({
-            //     needResult: 1, // 默认为0，扫描结果由微信处理，1则直接返回扫描结果，
-            //     scanType: ["qrCode","barCode"], // 可以指定扫二维码还是一维码，默认二者都有
-            //     success: function (res:any) {
-            //         result.value = res.resultStr; // 当needResult 为 1 时，扫码返回的结果
-            //     }
-            // });
+        wx.ready(function () {
+            if (that.$route.query.state === 'STATE') {
+                wx.scanQRCode({
+                    needResult: 1, // 默认为0，扫描结果由微信处理，1则直接返回扫描结果，
+                    scanType: ["qrCode", "barCode"], // 可以指定扫二维码还是一维码，默认二者都有
+                    success: function (res: any) {
+                        security.value.batch = (res.resultStr).split('batch=')[1]; // 当needResult 为 1 时，扫码返回的结果
+                    }
+                });
+            } else {
+                security.value.batch = that.$route.query.state;
+            }
 
             wx.getLocation({
                 type: 'wgs84', // 默认为wgs84的gps坐标，如果要返回直接给openLocation用的火星坐标，可传入'gcj02'
-                success: function (res:any) {
-                    console.log(res)
-                    location.value = res
+                success: function (res: any) {
+                    security.value.latitude = res.latitude;
+                    security.value.longitude = res.longitude;
+                    //@ts-ignore
+                    let geocoder = new TMap.service.Geocoder();
+                    //@ts-ignore
+                    let location = new TMap.LatLng(res.latitude, res.longitude);
+                    geocoder.getAddress({location: location}).then((result: any) => {
+                        security.value.address = result.result.address
+                    });
                 }
             });
-
-
         });
         //
         // wx.error(function(res:any){
@@ -284,24 +285,51 @@
 
     //发送动态码
     function send() {
-        if (/^1[3,4,5,6,7,8,9][0-9]{9}$/.test(phone.value)) {
+        if (/^1[3,4,5,6,7,8,9][0-9]{9}$/.test(security.value.phone)) {
             codeLoading.value = true;
-            setTimeout(() => {
+            idc.conex_getDynamic_post({
+                phone: security.value.phone,
+                batch: security.value.batch,
+                longitude: security.value.longitude,
+                latitude: security.value.latitude,
+                address: security.value.address,
+            }).then((data: any) => {
+                if(data.state.code=='200'){
+                    codeTrue.value = data.state.msg;
+                    step.value = 2;
+                    loop();
+                    codeLoading.value = false;
+                }
+            }).finally(() => {
                 codeLoading.value = false;
-                step.value = 2;
-                loop();
-            }, 1000)
+            })
         } else {
             Notify({type: 'danger', message: '手机号格式错误', duration: 3000});
         }
     }
 
+    const isCertified = ref(true)
+    const number = ref('')
+    const showLoad = ref(false)
     //验证结果
     function step3() {
-        setTimeout(() => {
-            clear();
+        showLoad.value = true
+        showKeyboard.value = false
+        clear();
+        idc.conex_verify_post({
+            field: security.value.erCode,
+        }).then((data: any) => {
             step.value = 3;
-        }, 500)
+            showLoad.value = false
+            if(data.state.code=='200'){
+                isCertified.value = true
+                number.value = data.state.msg;
+            }else{
+                isCertified.value = false
+            }
+        }).finally(() => {
+            showLoad.value = false
+        })
     }
 
     //计时器
@@ -325,39 +353,30 @@
         codeInfo.value = '';
     }
 
-    const location = ref('')
-    const locationIp = ref('')
+    const security = ref({
+        batch: '',
+        latitude: '',
+        longitude: '',
+        address: '',
+        phone:'',
+        erCode: ''
+    })
 
-    //定位
-    function getLocation() {
-        //IP地址定位
-        // @ts-ignore
-        new BMapGL.LocalCity().get((result: any) => {
-            // @ts-ignore
-            new BMapGL.Geocoder().getLocation(new BMapGL.Point(result.center.lng, result.center.lat), function (result: any) {
-                if (result) {
-                    //console.log(result)
-                    locationIp.value = result.address;
-                }
-            });
-        });
-
-        //浏览器定位
-        // @ts-ignore
-        let geolocation = new BMapGL.Geolocation();
-        // 开启SDK辅助定位
-        geolocation.enableSDKLocation();
-        geolocation.getCurrentPosition(function (r: any) {
-            let address = r.address.country + r.address.province + r.address.city + r.address.district + r.address.street + r.address.street_number
-            //console.log(r, address)
-            location.value = address;
-        });
+    //初始化判断入口
+    async function init() {
+        if (that.$route.query.batch) {
+            //直接扫一扫跳转
+            window.location.href = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx6bb1791a5ba66248&redirect_uri=http%3A%2F%2F192.168.137.1&response_type=code&scope=snsapi_userinfo&state=' + that.$route.query.batch + '#wechat_redirect'
+        } else {
+            //微信公众号
+            await cookies();
+            await isWxToken();
+            await isCgiToken();
+        }
     }
 
     onMounted(async () => {
-        await cookies();
-        await isWxToken();
-        await isCgiToken();
+        await init();
     })
 
 
@@ -393,12 +412,23 @@
 
         .step2 {
             margin-top: 1rem;
+            .load{
+                text-align: center;
+                margin-top: 1rem;
+            }
         }
 
         .step3 {
             padding: 1.2rem;
             font-size: 1.2rem;
             text-align: center;
+            .cx{
+                margin-top: 10px;
+                font-size: 1rem;
+                label{
+                    color: $primary;
+                }
+            }
         }
     }
 </style>

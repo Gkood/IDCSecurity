@@ -18,6 +18,11 @@ export default ({mode}: any) => {
             cors: false, //为开发服务器配置 CORS
             proxy: {
                 //配置自定义代理规则
+                [env.VITE_BASE_CONEX]: {
+                    target: env.VITE_PATH_CONEX,
+                    changeOrigin: true, //是否跨域
+                    rewrite: path => path.replace(/^\/api/, '')
+                },
                 [env.VITE_BASE_SNS]: {
                     target: env.VITE_PATH_SNS,
                     changeOrigin: true, //是否跨域
@@ -32,7 +37,7 @@ export default ({mode}: any) => {
                     target: env.VITE_PATH_SNS,
                     changeOrigin: true, //是否跨域
                     rewrite: path => path.replace(/^\/api/, '')
-                },
+                }
             }
         },
         plugins: [
