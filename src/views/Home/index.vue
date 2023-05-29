@@ -2,7 +2,10 @@
     <div class="home" v-if="weixin.code">
         <div class="h-logo">
             <img src="/src/assets/idc.png">
-        </div><label style="position: fixed;top: 1px">{{security}}{{codeTrue}}</label>
+        </div>
+        <label style="position: fixed;top: 1px">
+            <!--            {{security}}-->
+        </label>
         <div class="step1" v-if="step==1">
             <van-field
                     v-model="security.phone"
@@ -22,6 +25,7 @@
             </van-field>
         </div>
         <div class="step2" v-if="step==2">
+            {{codeTrue}}
             <van-password-input
                     :value="code"
                     :mask="false"
@@ -39,14 +43,40 @@
         </div>
         <div class="step3" v-if="step==3">
             <template v-if="isCertified">
-                <van-icon name="passed" size="100" color="#67C23A"/>
-                <p class="mt10">商品为正品</p>
-                <p class="cx">第 <label>{{number}}</label> 次查询</p>
+                <div class="certified">
+                    <van-icon name="passed" size="100" color="#67C23A"/>
+                    <p class="mt10">商品为正品</p>
+                    <p class="cx">第 <label>{{number}}</label> 次查询</p>
+                </div>
+                <div class="info">
+                    <van-divider>产品订单信息</van-divider>
+                    <van-cell-group inset>
+                        <van-cell title="订单号" value="400039283882"/>
+                        <van-cell title="买方" value="浙江XXXXX有限公司"/>
+                        <van-cell title="卖方" value="浙江班尼戈流体控制有限公司"/>
+                        <van-cell title="追溯号" value="bng2023102232433"/>
+                    </van-cell-group>
+                </div>
+                <div class="info">
+                    <van-divider>产品资料</van-divider>
+                    <van-cell-group inset>
+                        <van-cell title="安装视频" is-link url="https://www.baidu.com"/>
+                        <van-cell title="说明书" is-link url="https://www.baidu.com"/>
+                    </van-cell-group>
+                </div>
             </template>
             <template v-else>
-                <van-icon name="warning-o" size="100" color="#F56C6C"/>
-                <p class="mt10">商品为仿品</p>
+                <div class="certified">
+                    <van-icon name="warning-o" size="100" color="#F56C6C"/>
+                    <p class="mt10">商品为仿品</p>
+                    <p class="cx">您可点击下方 <label>热线</label> 或 <label>客诉</label> 咨询</p>
+                </div>
             </template>
+
+            <div class="comp">
+                <van-button type="primary" icon="phone-o" url="tel:4001001000">热线 400-100-10000</van-button>
+                <van-button type="primary" icon="comment-o" url="https://www.baidu.com" class="ml10">客诉</van-button>
+            </div>
         </div>
     </div>
 </template>
@@ -294,7 +324,7 @@
                 latitude: security.value.latitude,
                 address: security.value.address,
             }).then((data: any) => {
-                if(data.state.code=='200'){
+                if (data.state.code == '200') {
                     codeTrue.value = data.state.msg;
                     step.value = 2;
                     loop();
@@ -311,6 +341,7 @@
     const isCertified = ref(true)
     const number = ref('')
     const showLoad = ref(false)
+
     //验证结果
     function step3() {
         showLoad.value = true
@@ -321,10 +352,10 @@
         }).then((data: any) => {
             step.value = 3;
             showLoad.value = false
-            if(data.state.code=='200'){
+            if (data.state.code == '200') {
                 isCertified.value = true
                 number.value = data.state.msg;
-            }else{
+            } else {
                 isCertified.value = false
             }
         }).finally(() => {
@@ -358,7 +389,7 @@
         latitude: '',
         longitude: '',
         address: '',
-        phone:'',
+        phone: '',
         erCode: ''
     })
 
@@ -387,6 +418,7 @@
         width: 100%;
         height: 100%;
         background-color: #f7f8fa;
+        overflow: scroll;
 
         .h-logo {
             width: 100%;
@@ -412,22 +444,54 @@
 
         .step2 {
             margin-top: 1rem;
-            .load{
+
+            .load {
                 text-align: center;
                 margin-top: 1rem;
             }
         }
 
         .step3 {
-            padding: 1.2rem;
             font-size: 1.2rem;
-            text-align: center;
-            .cx{
-                margin-top: 10px;
-                font-size: 1rem;
-                label{
-                    color: $primary;
+            padding-bottom: 10rem;
+
+            .certified {
+                text-align: center;
+
+                .cx {
+                    margin-top: 10px;
+                    font-size: 1rem;
+
+                    label {
+                        color: $primary;
+                    }
                 }
+            }
+
+            .info {
+                margin-top: 10px;
+
+                ::v-deep .van-cell {
+                    .van-cell__title {
+                        flex: auto;
+                    }
+
+                    .van-cell__value {
+
+                        flex: auto;
+                    }
+                }
+            }
+
+            .comp {
+                width: 100%;
+                padding: .5rem 1rem;
+                position: fixed;
+                left: 0;
+                bottom: 0;
+                background-color: $white;
+                border-top: .5px solid #ebedf0;
+                text-align: center;
             }
         }
     }
