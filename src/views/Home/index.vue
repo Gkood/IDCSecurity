@@ -25,7 +25,6 @@
             </van-field>
         </div>
         <div class="step2" v-if="step==2">
-            {{codeTrue}}
             <van-password-input
                     :value="code"
                     :mask="false"
@@ -54,7 +53,7 @@
                         <van-cell title="订单号" value="400039283882"/>
                         <van-cell title="买方" value="浙江XXXXX有限公司"/>
                         <van-cell title="卖方" value="浙江班尼戈流体控制有限公司"/>
-                        <van-cell title="追溯号" value="bng2023102232433"/>
+                        <van-cell title="追溯码" value="bng2023102232433"/>
                     </van-cell-group>
                 </div>
                 <div class="info">
@@ -74,7 +73,7 @@
             </template>
 
             <div class="comp">
-                <van-button type="primary" icon="phone-o" url="tel:4001001000">热线 400-100-10000</van-button>
+                <van-button type="primary" icon="phone-o" url="tel:4007500977">热线 400-750-0977</van-button>
                 <van-button type="primary" icon="comment-o" url="https://www.baidu.com" class="ml10">客诉</van-button>
             </div>
         </div>
@@ -325,6 +324,7 @@
                 address: security.value.address,
             }).then((data: any) => {
                 if (data.state.code == '200') {
+                    console.log(data.state.msg)
                     codeTrue.value = data.state.msg;
                     step.value = 2;
                     loop();
